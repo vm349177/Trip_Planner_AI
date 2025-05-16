@@ -1,0 +1,33 @@
+{
+    "manifest_version": 3,
+    "name": "Maps Trip Planner",
+    "version": "1.0",
+    "description": "A chatbot-style assistant that helps plan trips directly from Google Maps.",
+    "icons": {
+      "128": "assets/icon.png"
+    },
+    "permissions": [
+      "scripting",
+      "activeTab"
+    ],
+    "host_permissions": [
+      "https://www.google.com/maps/*",
+      "http://localhost:8000/*"
+    ],
+    "content_scripts": [
+      {
+        "matches": ["https://www.google.com/maps/*"],
+        "js": ["content/content.js"],
+        "run_at": "document_idle"
+      }
+    ],
+    "action": {
+      "default_popup": "ui/popup.html",
+      "default_title": "Maps Trip Planner",
+      "default_icon": "assets/icon.png"
+    },
+    "background": {
+      "service_worker": "background.js"
+    }
+  }
+  
