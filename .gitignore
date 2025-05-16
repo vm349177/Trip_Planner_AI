@@ -1,8 +1,11 @@
 # Ignore secret files
 .env
+*.key
+*.pem
 
 # Python cache
 __pycache__/
+*.pyc
 
 # Logs
 *.log
