@@ -1,0 +1,8 @@
+# Ignore secret files
+.env
+
+# Python cache
+__pycache__/
+
+# Logs
+*.log
