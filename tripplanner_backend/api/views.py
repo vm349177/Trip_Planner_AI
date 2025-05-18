@@ -4,6 +4,7 @@ import requests
 from django.http import JsonResponse
 from sentence_transformers import SentenceTransformer, util
 import torch
+from .rag_utils import run_rag,run_rag_history
 
 GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'  # Replace with your actual API key
 DATA_DIR = 'tripplanner_backend/data'
@@ -71,16 +72,29 @@ def updated_history(history):
     with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
         json.dump(history, f, ensure_ascii=False, indent=2)
 
-def rag_query(query,history):
-        
-def update_history(filename):
+def rag_answer_past(query,history):
+    try:
+        answer =run_rag_history(query,history)
+        return JsonResponse(answer, safe=False)
+    except Exception as e:
+        print(f"Error in rag_answer_past: {e}")
+        return JsonResponse({"error": "Failed to get answer from RAG"}, status=500)
+def rag_answer(query):
+    try:
+        answer =run_rag(query)
+        return JsonResponse(answer, safe=False)
+    except Exception as e:
+        print(f"Error in rag_answer: {e}")
+        return JsonResponse({"error": "Failed to get answer from RAG"}, status=500)
+def update_history(query,filename):
     """
     Update the history file with the new filename.
     """
     # Load existing history
     history = get_history()
     # Add new filename to history
-    history.append(filename)
+    # history.append(filename)
+    history.append({"query": query, "filename": filename})
 
     # Save updated history
     with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
@@ -97,8 +111,8 @@ def search(request):
         if len(history) > 0:
             similar_queries=find_similar_query(query,history)
             if len(similar_queries) > 0 and similar_queries[0][1] > THRESHOLD:
-                rag_query(similar_queries[0][0],query)
-                return JsonResponse({"message": "Using similar query from history"}, status=200)  
+                return rag_answer_past(query,similar_queries[0][0])
+                # return JsonResponse({"message": "Using similar query from history"}, status=200)  
     
         # Passing the query to the Google Maps API to Get results
         url=f"https://maps.googleapis.com/v1/place:searchText"
@@ -127,10 +141,11 @@ def search(request):
                 {"query":query,
                  "results":results
                  }, f, ensure_ascii=False, indent=2)
-        update_history(filename)
+        rag_answer(query)
+        update_history(query,filename)
 
-        # Filter results based on the query
-        filtered_results = [result for result in results if query.lower() in result['name'].lower()]
-        return JsonResponse(filtered_results, safe=False)
+        # # Filter results based on the query
+        # filtered_results = [result for result in results if query.lower() in result['name'].lower()]
+        # return JsonResponse(filtered_results, safe=False)
     else:
         return JsonResponse({'error': 'Invalid request method'}, status=400)
