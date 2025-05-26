@@ -9,13 +9,15 @@ https://docs.djangoproject.com/en/4.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
-
+__import__('pysqlite3')
+import sys
 from pathlib import Path
-
+from dotenv import load_dotenv
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
+load_dotenv()
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
@@ -26,8 +28,13 @@ SECRET_KEY = 'django-insecure-=uhnl6zf2=^31_93q2#_sn0l^qdo-++g)f562l+g8^i7)8bkm_
 DEBUG = True
 
 ALLOWED_HOSTS = []
-
-
+sys.modules['sqlite3'] = __import__('pysqlite3')
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}   
 # Application definition
 
 INSTALLED_APPS = [
