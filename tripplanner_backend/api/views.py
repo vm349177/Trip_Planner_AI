@@ -5,22 +5,28 @@ from django.http import JsonResponse
 from sentence_transformers import SentenceTransformer, util
 import torch
 from .rag_utils import run_rag,run_rag_history
+from dotenv import load_dotenv
+load_dotenv()
 
-GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY'  # Replace with your actual API key
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+# print("GOOGLE_API_KEY =", GOOGLE_API_KEY)  # For debugging only!
 DATA_DIR = 'tripplanner_backend/data'
 HISTORY_FILE = os.path.join(DATA_DIR,'history.json')  
 THRESHOLD = 0.7
 
 def get_history():
-    """
-    Load the history of queries from the JSON file.
-    """
-    if os.path.exists(HISTORY_FILE):
+    if not os.path.exists(HISTORY_FILE):
+        return []
+
+    try:
         with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-            history = json.load(f)
-    else:
-        history = []
-    return history
+            content = f.read().strip()
+            if not content:
+                return []
+            return json.loads(content)
+    except json.JSONDecodeError:
+        print("[RAG HISTORY ERROR] Failed to parse JSON history file.")
+        return []
 
 def find_similar_query(query,history):
     """
@@ -115,22 +121,33 @@ def search(request):
                 # return JsonResponse({"message": "Using similar query from history"}, status=200)  
     
         # Passing the query to the Google Maps API to Get results
-        url=f"https://maps.googleapis.com/v1/place:searchText"
+        # url=f"https://maps.googleapis.com/v1/place:searchText"
+        # headers = {
+        # 'Content-Type': 'application/json',
+        # "X-Goog-Api-Key": GOOGLE_API_KEY,
+        # # "X-Goog-FieldMask": "*"
+        # "X-Goog-FieldMask": "name,formatted_address,geometry/location,description,photos"
+        # }
+        url = "https://places.googleapis.com/v1/places:searchText"
         headers = {
         'Content-Type': 'application/json',
         "X-Goog-Api-Key": GOOGLE_API_KEY,
-        "X-Goog-FieldMask": "*"
-        # "X-Goog-FieldMask": "name,formatted_address,geometry/location,description,photos"
+        "X-Goog-FieldMask": "places.displayName,places.formattedAddress,places.location,places.photos,places.editorialSummary,places.types,places.rating"#replaced the shortDescription with editorialSummary
         }
         payload = {
-        "query": query,
-        "maxResultCount": 10,
+        "textQuery": query,   # Use "textQuery" instead of "query"
+        "maxResultCount": 10
         }
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(url, headers=headers, json=payload)  # Use POST, not GET
+        # if response.status_code != 200:
+        #     return JsonResponse({"error": "Failed to fetch data from Google API"}, status=500)
         if response.status_code != 200:
+            print("Google API Error:")
+            print("Status Code:", response.status_code)
+            print("Response Text:", response.text)
             return JsonResponse({"error": "Failed to fetch data from Google API"}, status=500)
         results = response.json()
-
+        
         # Save the results to a JSON file
         os.makedirs(DATA_DIR, exist_ok=True)
         filename = clean_filename(query)
@@ -141,9 +158,9 @@ def search(request):
                 {"query":query,
                  "results":results
                  }, f, ensure_ascii=False, indent=2)
-        rag_answer(query)
+        
         update_history(query,filename)
-
+        return rag_answer(query)
         # # Filter results based on the query
         # filtered_results = [result for result in results if query.lower() in result['name'].lower()]
         # return JsonResponse(filtered_results, safe=False)
