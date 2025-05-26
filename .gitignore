@@ -10,3 +10,5 @@ __pycache__/
 # Logs
 *.log
 env/
+tripplanner_backend/tripplanner_backend/data/
+tripplanner_backend/tripplanner_backend/vectorstore/
