@@ -9,6 +9,6 @@ __pycache__/
 
 # Logs
 *.log
-env/
+myenv/
 tripplanner_backend/tripplanner_backend/data/
 tripplanner_backend/tripplanner_backend/vectorstore/
